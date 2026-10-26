@@ -16,6 +16,9 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
+  mvc:
+    problemdetails:
+      enabled: true
   data:
     redis:
       host: localhost
@@ -29,3 +32,12 @@ management:
   endpoint:
     health:
       show-details: always
+
+seatrush:
+  security:
+    # Local development defaults only. Override with environment variables outside your machine.
+    jwt-secret: ${SEATRUSH_JWT_SECRET:local-dev-jwt-secret-change-me-0123456789}
+    pepper: ${SEATRUSH_PEPPER:local-dev-pepper-change-me}
+    token-ttl: 2h
+    admin-username: ${SEATRUSH_ADMIN_USERNAME:admin}
+    admin-password: ${SEATRUSH_ADMIN_PASSWORD:admin12345}
