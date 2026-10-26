@@ -68,4 +68,13 @@ public class Seat {
     public long getVersion() {
         return version;
     }
+
+    /** Only called while the row is locked; the service has already checked the status. */
+    public void hold(Long holdId) {
+        if (status != SeatStatus.AVAILABLE) {
+            throw new IllegalStateException("Seat " + id + " is " + status + ", not AVAILABLE");
+        }
+        this.status = SeatStatus.HELD;
+        this.holdId = holdId;
+    }
 }

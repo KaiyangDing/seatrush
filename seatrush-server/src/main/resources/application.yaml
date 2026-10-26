@@ -34,6 +34,8 @@ management:
       show-details: always
 
 seatrush:
+  holds:
+    duration: 5m
   security:
     # Local development defaults only. Override with environment variables outside your machine.
     jwt-secret: ${SEATRUSH_JWT_SECRET:local-dev-jwt-secret-change-me-0123456789}
