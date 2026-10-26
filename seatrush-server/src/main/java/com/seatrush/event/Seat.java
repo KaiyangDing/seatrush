@@ -1,0 +1,71 @@
+package com.seatrush.event;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+
+@Entity
+@Table(name = "seats")
+public class Seat {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "event_id", nullable = false)
+    private Long eventId;
+
+    @Column(name = "row_no", nullable = false)
+    private int rowNo;
+
+    @Column(name = "seat_no", nullable = false)
+    private int seatNo;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private SeatStatus status;
+
+    @Column(name = "hold_id")
+    private Long holdId;
+
+    // Used by the optimistic-locking strategy in phase 2
+    @Version
+    private long version;
+
+    protected Seat() {
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public Long getEventId() {
+        return eventId;
+    }
+
+    public int getRowNo() {
+        return rowNo;
+    }
+
+    public int getSeatNo() {
+        return seatNo;
+    }
+
+    public SeatStatus getStatus() {
+        return status;
+    }
+
+    public Long getHoldId() {
+        return holdId;
+    }
+
+    public long getVersion() {
+        return version;
+    }
+}

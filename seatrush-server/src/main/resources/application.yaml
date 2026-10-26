@@ -3,7 +3,7 @@ spring:
     name: seatrush
   datasource:
     # 只用于本地开发：关闭 SSL，允许获取公钥，避免 MySQL 8 常见的连接报错
-    url: jdbc:mysql://localhost:3306/seatrush?serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
+    url: jdbc:mysql://localhost:3306/seatrush?serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false&rewriteBatchedStatements=true
     username: seatrush
     password: seatrush
   jpa:
