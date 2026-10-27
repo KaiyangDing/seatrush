@@ -37,10 +37,12 @@ seatrush:
   holds:
     duration: 5m
   lock:
-    # Which seat lock strategy new holds use: pessimistic, optimistic or in-memory
+    # Which seat lock strategy new holds use: pessimistic, optimistic, in-memory or redis
     strategy: pessimistic
     # How long a request waits for a seat lock before it gives up with 409
     wait-timeout: 5s
+    # How long a Redis seat lock lives if its owner crashes before releasing it
+    redis-lease: 10s
   security:
     # Local development defaults only. Override with environment variables outside your machine.
     jwt-secret: ${SEATRUSH_JWT_SECRET:local-dev-jwt-secret-change-me-0123456789}

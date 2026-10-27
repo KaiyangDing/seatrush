@@ -110,7 +110,7 @@ class InMemorySeatLockStrategyTest {
 
     private static InMemorySeatLockStrategy withWaitTimeout(Duration waitTimeout) {
         // runTransaction never reads seats, so no repository is needed
-        return new InMemorySeatLockStrategy(null, new LockProperties("in-memory", waitTimeout));
+        return new InMemorySeatLockStrategy(null, new LockProperties("in-memory", waitTimeout, Duration.ofSeconds(10)));
     }
 
     private static SortedSet<Long> seats(long... seatIds) {

@@ -55,7 +55,7 @@ class SeatLockStrategiesTest {
     }
 
     private static LockProperties startingWith(String strategy) {
-        return new LockProperties(strategy, Duration.ofSeconds(5));
+        return new LockProperties(strategy, Duration.ofSeconds(5), Duration.ofSeconds(10));
     }
 
     private record NamedStrategy(String name) implements SeatLockStrategy {
