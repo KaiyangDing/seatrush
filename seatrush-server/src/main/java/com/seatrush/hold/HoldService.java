@@ -15,6 +15,7 @@ import com.seatrush.event.SeatRepository;
 import com.seatrush.event.SeatStatus;
 import com.seatrush.hold.HoldDtos.CreateHoldRequest;
 import com.seatrush.hold.HoldDtos.HoldResponse;
+import com.seatrush.lock.SeatLockStrategy;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -29,16 +30,19 @@ public class HoldService {
     private final EventRepository eventRepository;
     private final TransactionTemplate transactionTemplate;
     private final ApplicationEventPublisher events;
+    private final SeatLockStrategy lockStrategy;
     private final Duration holdDuration;
 
     public HoldService(HoldRepository holdRepository, SeatRepository seatRepository,
                        EventRepository eventRepository, TransactionTemplate transactionTemplate,
-                       ApplicationEventPublisher events, HoldProperties properties) {
+                       ApplicationEventPublisher events, SeatLockStrategy lockStrategy,
+                       HoldProperties properties) {
         this.holdRepository = holdRepository;
         this.seatRepository = seatRepository;
         this.eventRepository = eventRepository;
         this.transactionTemplate = transactionTemplate;
         this.events = events;
+        this.lockStrategy = lockStrategy;
         this.holdDuration = properties.duration();
     }
 
@@ -52,8 +56,15 @@ public class HoldService {
         if (existing.isPresent()) {
             return toResponse(existing.get());
         }
+        // Checked before any lock is taken: a bad request should not make anyone wait
+        SortedSet<Long> seatIds = new TreeSet<>(request.seatIds());
+        if (seatIds.size() != request.seatIds().size()) {
+            throw new InvalidHoldRequestException("Seat ids must not repeat");
+        }
         try {
-            return transactionTemplate.execute(status -> holdSeats(userId, eventId, request));
+            // The strategy decides how this transaction is kept apart from others that want the same seats
+            return lockStrategy.runTransaction(seatIds, () -> transactionTemplate.execute(
+                    status -> holdSeats(userId, eventId, request.idempotencyKey(), seatIds)));
         } catch (DataIntegrityViolationException e) {
             // Two requests with the same key ran at once; the unique key let only one of them commit
             return holdRepository.findByUserIdAndIdempotencyKey(userId, request.idempotencyKey())
@@ -124,27 +135,23 @@ public class HoldService {
     }
 
     /** Runs inside one transaction: the hold row and the seat updates commit or roll back together. */
-    private HoldResponse holdSeats(long userId, long eventId, CreateHoldRequest request) {
+    private HoldResponse holdSeats(long userId, long eventId, String idempotencyKey, SortedSet<Long> seatIds) {
         if (!eventRepository.existsById(eventId)) {
             throw new EventNotFoundException(eventId);
-        }
-        SortedSet<Long> seatIds = new TreeSet<>(request.seatIds());
-        if (seatIds.size() != request.seatIds().size()) {
-            throw new InvalidHoldRequestException("Seat ids must not repeat");
         }
 
         // 1. Insert the hold first. A concurrent request with the same key now waits on the unique index.
         //    The column keeps milliseconds, so truncate: the first response then matches every later read.
         Instant expiresAt = Instant.now().plus(holdDuration).truncatedTo(ChronoUnit.MILLIS);
-        Hold hold = holdRepository.saveAndFlush(new Hold(userId, eventId, request.idempotencyKey(), expiresAt));
+        Hold hold = holdRepository.saveAndFlush(new Hold(userId, eventId, idempotencyKey, expiresAt));
 
-        // 2. SELECT ... FOR UPDATE, in ascending id order, so two overlapping orders cannot deadlock
-        List<Seat> seats = seatRepository.findAllByIdForUpdate(seatIds);
+        // 2. Read the seats the way the strategy says, e.g. SELECT ... FOR UPDATE for the pessimistic one
+        List<Seat> seats = lockStrategy.loadSeats(seatIds);
         if (seats.size() != seatIds.size() || seats.stream().anyMatch(s -> !s.getEventId().equals(eventId))) {
             throw new InvalidHoldRequestException("All seats must exist and belong to event " + eventId);
         }
 
-        // 3. Check under the lock: no other transaction can change these rows until this one ends
+        // 3. Check: the strategy guarantees no other request can hold these seats until this transaction ends
         List<Long> unavailable = seats.stream()
                 .filter(seat -> seat.getStatus() != SeatStatus.AVAILABLE)
                 .map(Seat::getId)
