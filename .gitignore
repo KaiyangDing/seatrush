@@ -3,3 +3,5 @@ target/
 *.iml
 .vscode/
 *.log
+# Reports written by the load test (copy the ones worth keeping into docs/)
+loadtest-results/

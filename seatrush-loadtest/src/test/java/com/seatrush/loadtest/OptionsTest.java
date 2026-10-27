@@ -15,7 +15,9 @@ class OptionsTest {
 
         assertThat(options.baseUrl()).isEqualTo(URI.create("http://localhost:8080"));
         assertThat(options.users()).isEqualTo(300);
-        assertThat(options.scenario()).isEqualTo(Scenario.HOT_ROW);
+        assertThat(options.scenarios()).containsExactly(Scenario.HOT_SEAT, Scenario.HOT_ROW, Scenario.SPREAD);
+        assertThat(options.compare()).isFalse();
+        assertThat(options.rounds()).isEqualTo(3);
     }
 
     @Test
@@ -23,8 +25,18 @@ class OptionsTest {
         Options options = Options.parse("--users", "50", "--scenario", "hot-seat", "--base-url", "http://server:9000");
 
         assertThat(options.users()).isEqualTo(50);
-        assertThat(options.scenario()).isEqualTo(Scenario.HOT_SEAT);
+        assertThat(options.scenarios()).containsExactly(Scenario.HOT_SEAT);
         assertThat(options.baseUrl()).isEqualTo(URI.create("http://server:9000"));
+    }
+
+    @Test
+    void compareTakesAListOfStrategies() {
+        Options options = Options.parse("--compare", "optimistic, redis", "--scenario", "spread,hot-row", "--rounds", "5");
+
+        assertThat(options.compare()).isTrue();
+        assertThat(options.strategies()).containsExactly("optimistic", "redis");
+        assertThat(options.scenarios()).containsExactly(Scenario.SPREAD, Scenario.HOT_ROW);
+        assertThat(options.rounds()).isEqualTo(5);
     }
 
     @Test
