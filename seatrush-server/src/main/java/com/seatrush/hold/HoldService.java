@@ -16,6 +16,7 @@ import com.seatrush.event.SeatStatus;
 import com.seatrush.hold.HoldDtos.CreateHoldRequest;
 import com.seatrush.hold.HoldDtos.HoldResponse;
 import com.seatrush.lock.SeatLockStrategies;
+import com.seatrush.live.SeatsChangedEvent;
 import com.seatrush.lock.SeatLockStrategy;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -103,6 +104,7 @@ public class HoldService {
         List<Seat> seats = seatRepository.findByHoldIdOrderByIdAsc(holdId);
         seats.forEach(Seat::sell);
         hold.confirm(now);
+        publishSeatChange(hold, seats, SeatStatus.SOLD);
         return toResponse(hold, seats);
     }
 
@@ -117,8 +119,10 @@ public class HoldService {
             throw new HoldNotActiveException("Hold " + holdId + " is " + hold.getStatus());
         }
 
-        seatRepository.findByHoldIdOrderByIdAsc(holdId).forEach(Seat::release);
+        List<Seat> seats = seatRepository.findByHoldIdOrderByIdAsc(holdId);
+        seats.forEach(Seat::release);
         hold.cancel();
+        publishSeatChange(hold, seats, SeatStatus.AVAILABLE);
         // The seats are on sale again, so the hold no longer owns any
         return toResponse(hold, List.of());
     }
@@ -132,8 +136,10 @@ public class HoldService {
         holdRepository.findByIdForUpdate(holdId)
                 .filter(hold -> hold.getStatus() == HoldStatus.ACTIVE)
                 .ifPresent(hold -> {
-                    seatRepository.findByHoldIdOrderByIdAsc(holdId).forEach(Seat::release);
+                    List<Seat> seats = seatRepository.findByHoldIdOrderByIdAsc(holdId);
+                    seats.forEach(Seat::release);
                     hold.expire();
+                    publishSeatChange(hold, seats, SeatStatus.AVAILABLE);
                 });
     }
 
@@ -165,9 +171,17 @@ public class HoldService {
         }
 
         seats.forEach(seat -> seat.hold(hold.getId()));
-        // 4. Starts the expiry countdown, but only once this transaction has committed
+        // 4. Both only take effect once this transaction has committed: the expiry countdown starts,
+        //    and every open seat map of the event is told that these seats are taken
         events.publishEvent(new HoldCreatedEvent(hold.getId(), hold.getExpiresAt()));
+        publishSeatChange(hold, seats, SeatStatus.HELD);
         return new HoldResponse(hold.getId(), eventId, hold.getStatus(), List.copyOf(seatIds), hold.getExpiresAt());
+    }
+
+    /** Pushed to the browsers by SeatUpdatePublisher, but only after this transaction has committed. */
+    private void publishSeatChange(Hold hold, List<Seat> seats, SeatStatus status) {
+        List<Long> seatIds = seats.stream().map(Seat::getId).toList();
+        events.publishEvent(new SeatsChangedEvent(hold.getEventId(), seatIds, status));
     }
 
     /**
