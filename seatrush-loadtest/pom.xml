@@ -10,4 +10,37 @@
     </parent>
     <artifactId>seatrush-loadtest</artifactId>
     <name>seatrush-loadtest</name>
+    <description>Plain Java load-test client: no Spring, only java.net.http and Jackson</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>seatrush-loadtest</finalName>
+        <plugins>
+            <!-- Packs the client and Jackson into one jar: java -jar seatrush-loadtest/target/seatrush-loadtest.jar -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.seatrush.loadtest.LoadTestMain</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

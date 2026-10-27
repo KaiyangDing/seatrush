@@ -24,6 +24,12 @@ spring:
       host: localhost
       port: 6379
 
+server:
+  tomcat:
+    # A rush opens hundreds of connections in the same instant. With the default backlog of 100 the
+    # operating system refuses the rest before Tomcat even sees them (found by the load test).
+    accept-count: 1000
+
 management:
   endpoints:
     web:
