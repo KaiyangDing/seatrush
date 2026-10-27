@@ -5,6 +5,7 @@ import java.util.SortedSet;
 
 import com.seatrush.event.Seat;
 import com.seatrush.event.SeatRepository;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Component;
  * Nothing extra is needed around the transaction, so {@link #runTransaction} keeps its default.
  */
 @Component
+@Order(1)
 public class PessimisticSeatLockStrategy implements SeatLockStrategy {
 
     private final SeatRepository seatRepository;

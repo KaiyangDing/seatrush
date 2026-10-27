@@ -19,24 +19,42 @@ import com.seatrush.event.Seat;
 import com.seatrush.event.SeatRepository;
 import com.seatrush.event.SeatStatus;
 import com.seatrush.hold.HoldDtos.CreateHoldRequest;
+import com.seatrush.lock.LockProperties;
+import com.seatrush.lock.SeatLockStrategies;
 import com.seatrush.user.Role;
 import com.seatrush.user.User;
 import com.seatrush.user.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * Real threads, real transactions, real row locks. Not @Transactional: every thread has to
+ * Real threads, real transactions, real locks. Not @Transactional: every thread has to
  * commit on its own, so the data is cleaned up by hand after each test.
+ * <p>
+ * The whole class runs once per seat lock strategy: every strategy has to pass the same races.
  */
 @SpringBootTest
+@ParameterizedClass(name = "{0}")
+@ValueSource(strings = {"pessimistic", "optimistic"})
 class HoldConcurrencyTest {
 
     private static final int USERS = 100;
+
+    @Parameter
+    private String strategy;
+
+    @Autowired
+    private SeatLockStrategies lockStrategies;
+
+    @Autowired
+    private LockProperties lockProperties;
 
     @Autowired
     private HoldService holdService;
@@ -62,6 +80,7 @@ class HoldConcurrencyTest {
 
     @BeforeEach
     void setUp() {
+        lockStrategies.use(strategy);
         eventId = eventService.createEvent(new CreateEventRequest(
                 "Race Test", "Hall R", Instant.parse("2030-01-01T19:30:00Z"), 1, 2)).id();
         seatIds = seatRepository.findByEventIdOrderByRowNoAscSeatNoAsc(eventId).stream()
@@ -76,6 +95,7 @@ class HoldConcurrencyTest {
 
     @AfterEach
     void cleanUp() {
+        lockStrategies.use(lockProperties.strategy());
         // Children before parents because of the foreign keys
         jdbcTemplate.update("DELETE FROM seats WHERE event_id = ?", eventId);
         jdbcTemplate.update("DELETE FROM holds WHERE event_id = ?", eventId);

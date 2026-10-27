@@ -7,6 +7,7 @@ import com.seatrush.hold.HoldNotActiveException;
 import com.seatrush.hold.HoldNotFoundException;
 import com.seatrush.hold.InvalidHoldRequestException;
 import com.seatrush.hold.SeatsUnavailableException;
+import com.seatrush.lock.SeatsBusyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -35,6 +36,11 @@ public class ApiExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
         problem.setProperty("unavailableSeatIds", e.getSeatIds());
         return problem;
+    }
+
+    @ExceptionHandler(SeatsBusyException.class)
+    ProblemDetail handleSeatsBusy(SeatsBusyException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
     }
 
     @ExceptionHandler(InvalidHoldRequestException.class)

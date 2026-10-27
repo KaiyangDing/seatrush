@@ -36,6 +36,9 @@ management:
 seatrush:
   holds:
     duration: 5m
+  lock:
+    # Which seat lock strategy new holds use: pessimistic or optimistic
+    strategy: pessimistic
   security:
     # Local development defaults only. Override with environment variables outside your machine.
     jwt-secret: ${SEATRUSH_JWT_SECRET:local-dev-jwt-secret-change-me-0123456789}

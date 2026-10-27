@@ -15,6 +15,7 @@ import com.seatrush.event.SeatRepository;
 import com.seatrush.event.SeatStatus;
 import com.seatrush.hold.HoldDtos.CreateHoldRequest;
 import com.seatrush.hold.HoldDtos.HoldResponse;
+import com.seatrush.lock.SeatLockStrategies;
 import com.seatrush.lock.SeatLockStrategy;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -30,19 +31,19 @@ public class HoldService {
     private final EventRepository eventRepository;
     private final TransactionTemplate transactionTemplate;
     private final ApplicationEventPublisher events;
-    private final SeatLockStrategy lockStrategy;
+    private final SeatLockStrategies lockStrategies;
     private final Duration holdDuration;
 
     public HoldService(HoldRepository holdRepository, SeatRepository seatRepository,
                        EventRepository eventRepository, TransactionTemplate transactionTemplate,
-                       ApplicationEventPublisher events, SeatLockStrategy lockStrategy,
+                       ApplicationEventPublisher events, SeatLockStrategies lockStrategies,
                        HoldProperties properties) {
         this.holdRepository = holdRepository;
         this.seatRepository = seatRepository;
         this.eventRepository = eventRepository;
         this.transactionTemplate = transactionTemplate;
         this.events = events;
-        this.lockStrategy = lockStrategy;
+        this.lockStrategies = lockStrategies;
         this.holdDuration = properties.duration();
     }
 
@@ -61,10 +62,12 @@ public class HoldService {
         if (seatIds.size() != request.seatIds().size()) {
             throw new InvalidHoldRequestException("Seat ids must not repeat");
         }
+        // Read once: if an admin switches strategy meanwhile, this request still uses one strategy throughout
+        SeatLockStrategy strategy = lockStrategies.current();
         try {
             // The strategy decides how this transaction is kept apart from others that want the same seats
-            return lockStrategy.runTransaction(seatIds, () -> transactionTemplate.execute(
-                    status -> holdSeats(userId, eventId, request.idempotencyKey(), seatIds)));
+            return strategy.runTransaction(seatIds, () -> transactionTemplate.execute(
+                    status -> holdSeats(strategy, userId, eventId, request.idempotencyKey(), seatIds)));
         } catch (DataIntegrityViolationException e) {
             // Two requests with the same key ran at once; the unique key let only one of them commit
             return holdRepository.findByUserIdAndIdempotencyKey(userId, request.idempotencyKey())
@@ -135,7 +138,8 @@ public class HoldService {
     }
 
     /** Runs inside one transaction: the hold row and the seat updates commit or roll back together. */
-    private HoldResponse holdSeats(long userId, long eventId, String idempotencyKey, SortedSet<Long> seatIds) {
+    private HoldResponse holdSeats(SeatLockStrategy strategy, long userId, long eventId, String idempotencyKey,
+                                   SortedSet<Long> seatIds) {
         if (!eventRepository.existsById(eventId)) {
             throw new EventNotFoundException(eventId);
         }
@@ -146,7 +150,7 @@ public class HoldService {
         Hold hold = holdRepository.saveAndFlush(new Hold(userId, eventId, idempotencyKey, expiresAt));
 
         // 2. Read the seats the way the strategy says, e.g. SELECT ... FOR UPDATE for the pessimistic one
-        List<Seat> seats = lockStrategy.loadSeats(seatIds);
+        List<Seat> seats = strategy.loadSeats(seatIds);
         if (seats.size() != seatIds.size() || seats.stream().anyMatch(s -> !s.getEventId().equals(eventId))) {
             throw new InvalidHoldRequestException("All seats must exist and belong to event " + eventId);
         }
