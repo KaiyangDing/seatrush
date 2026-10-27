@@ -101,6 +101,12 @@ public class Hold {
         this.status = HoldStatus.CANCELLED;
     }
 
+    /** ACTIVE -> EXPIRED: the deadline passed before the hold was confirmed or cancelled. */
+    public void expire() {
+        requireActive();
+        this.status = HoldStatus.EXPIRED;
+    }
+
     private void requireActive() {
         if (status != HoldStatus.ACTIVE) {
             throw new IllegalStateException("Hold " + id + " is " + status + ", not ACTIVE");

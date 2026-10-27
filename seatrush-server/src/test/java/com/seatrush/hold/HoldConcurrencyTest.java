@@ -147,6 +147,35 @@ class HoldConcurrencyTest {
         assertThat(seatRepository.findAllById(seatIds)).extracting(Seat::getStatus).containsOnly(expected);
     }
 
+    @Test
+    void confirmAndExpiryRacingOnOneHoldNeverMixStates() throws Exception {
+        long owner = userIds.get(0);
+        long holdId = holdService.createHold(owner, eventId, new CreateHoldRequest(seatIds, "deadline")).id();
+        List<Callable<?>> attempts = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            if (i % 2 == 0) {
+                attempts.add(() -> holdService.confirmHold(owner, holdId));
+            } else {
+                // What the expiry thread does at the deadline, while the user is still clicking "pay"
+                attempts.add(() -> {
+                    holdService.expireHold(holdId);
+                    return null;
+                });
+            }
+        }
+
+        RaceResult result = race(attempts);
+
+        // Expiry never fails. If a confirm locked the hold first, every confirm succeeds and the expiry
+        // finds nothing to do; if the expiry was first, every confirm is rejected. Never a mix.
+        assertThat(result.errors()).isEmpty();
+        HoldStatus finalStatus = holdRepository.findById(holdId).orElseThrow().getStatus();
+        assertThat(finalStatus).isIn(HoldStatus.CONFIRMED, HoldStatus.EXPIRED);
+        assertThat(result.conflicts()).isEqualTo(finalStatus == HoldStatus.CONFIRMED ? 0 : 10);
+        SeatStatus expected = finalStatus == HoldStatus.CONFIRMED ? SeatStatus.SOLD : SeatStatus.AVAILABLE;
+        assertThat(seatRepository.findAllById(seatIds)).extracting(Seat::getStatus).containsOnly(expected);
+    }
+
     /** Starts every attempt on its own thread and releases them all at the same moment. */
     private RaceResult race(List<Callable<?>> attempts) throws InterruptedException {
         ExecutorService pool = Executors.newFixedThreadPool(attempts.size());

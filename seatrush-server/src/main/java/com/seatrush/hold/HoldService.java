@@ -15,6 +15,7 @@ import com.seatrush.event.SeatRepository;
 import com.seatrush.event.SeatStatus;
 import com.seatrush.hold.HoldDtos.CreateHoldRequest;
 import com.seatrush.hold.HoldDtos.HoldResponse;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,15 +28,17 @@ public class HoldService {
     private final SeatRepository seatRepository;
     private final EventRepository eventRepository;
     private final TransactionTemplate transactionTemplate;
+    private final ApplicationEventPublisher events;
     private final Duration holdDuration;
 
     public HoldService(HoldRepository holdRepository, SeatRepository seatRepository,
                        EventRepository eventRepository, TransactionTemplate transactionTemplate,
-                       HoldProperties properties) {
+                       ApplicationEventPublisher events, HoldProperties properties) {
         this.holdRepository = holdRepository;
         this.seatRepository = seatRepository;
         this.eventRepository = eventRepository;
         this.transactionTemplate = transactionTemplate;
+        this.events = events;
         this.holdDuration = properties.duration();
     }
 
@@ -106,6 +109,20 @@ public class HoldService {
         return toResponse(hold, List.of());
     }
 
+    /**
+     * Called by the expiry thread once the deadline has passed. Takes the same hold lock as confirm
+     * and cancel, so whichever comes first wins; a hold that was confirmed or cancelled in time is left alone.
+     */
+    @Transactional
+    public void expireHold(long holdId) {
+        holdRepository.findByIdForUpdate(holdId)
+                .filter(hold -> hold.getStatus() == HoldStatus.ACTIVE)
+                .ifPresent(hold -> {
+                    seatRepository.findByHoldIdOrderByIdAsc(holdId).forEach(Seat::release);
+                    hold.expire();
+                });
+    }
+
     /** Runs inside one transaction: the hold row and the seat updates commit or roll back together. */
     private HoldResponse holdSeats(long userId, long eventId, CreateHoldRequest request) {
         if (!eventRepository.existsById(eventId)) {
@@ -137,6 +154,8 @@ public class HoldService {
         }
 
         seats.forEach(seat -> seat.hold(hold.getId()));
+        // 4. Starts the expiry countdown, but only once this transaction has committed
+        events.publishEvent(new HoldCreatedEvent(hold.getId(), hold.getExpiresAt()));
         return new HoldResponse(hold.getId(), eventId, hold.getStatus(), List.copyOf(seatIds), hold.getExpiresAt());
     }
 

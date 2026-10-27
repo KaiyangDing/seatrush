@@ -1,5 +1,6 @@
 package com.seatrush.hold;
 
+import java.util.List;
 import java.util.Optional;
 
 import jakarta.persistence.LockModeType;
@@ -14,7 +15,9 @@ public interface HoldRepository extends JpaRepository<Hold, Long> {
 
     long countByEventId(Long eventId);
 
-    /** SELECT ... FOR UPDATE on one hold: confirm and cancel of the same hold run one at a time. */
+    List<Hold> findByStatus(HoldStatus status);
+
+    /** SELECT ... FOR UPDATE on one hold: confirm, cancel and expiry of the same hold run one at a time. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select h from Hold h where h.id = :id")
     Optional<Hold> findByIdForUpdate(@Param("id") Long id);
