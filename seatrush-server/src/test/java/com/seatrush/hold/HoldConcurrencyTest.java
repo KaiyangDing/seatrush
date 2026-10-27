@@ -121,6 +121,32 @@ class HoldConcurrencyTest {
         assertThat(result.conflicts()).isEqualTo(49);
     }
 
+    @Test
+    void confirmAndCancelRacingOnOneHoldNeverMixStates() throws Exception {
+        long owner = userIds.get(0);
+        long holdId = holdService.createHold(owner, eventId, new CreateHoldRequest(seatIds, "lifecycle")).id();
+        List<Callable<?>> attempts = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            if (i % 2 == 0) {
+                attempts.add(() -> holdService.confirmHold(owner, holdId));
+            } else {
+                attempts.add(() -> holdService.cancelHold(owner, holdId));
+            }
+        }
+
+        RaceResult result = race(attempts);
+
+        // Whichever action locks the hold first wins. Later calls of the same action are harmless
+        // repeats, and every call of the other action is rejected.
+        assertThat(result.errors()).isEmpty();
+        assertThat(result.successes()).isEqualTo(10);
+        assertThat(result.conflicts()).isEqualTo(10);
+        HoldStatus finalStatus = holdRepository.findById(holdId).orElseThrow().getStatus();
+        assertThat(finalStatus).isIn(HoldStatus.CONFIRMED, HoldStatus.CANCELLED);
+        SeatStatus expected = finalStatus == HoldStatus.CONFIRMED ? SeatStatus.SOLD : SeatStatus.AVAILABLE;
+        assertThat(seatRepository.findAllById(seatIds)).extracting(Seat::getStatus).containsOnly(expected);
+    }
+
     /** Starts every attempt on its own thread and releases them all at the same moment. */
     private RaceResult race(List<Callable<?>> attempts) throws InterruptedException {
         ExecutorService pool = Executors.newFixedThreadPool(attempts.size());
@@ -135,7 +161,7 @@ class HoldConcurrencyTest {
                 try {
                     attempt.call();
                     successes.incrementAndGet();
-                } catch (SeatsUnavailableException e) {
+                } catch (SeatsUnavailableException | HoldNotActiveException e) {
                     conflicts.incrementAndGet();
                 } catch (Throwable t) {
                     errors.add(t);

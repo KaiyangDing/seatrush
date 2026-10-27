@@ -3,6 +3,8 @@ package com.seatrush.common;
 import com.seatrush.auth.InvalidCredentialsException;
 import com.seatrush.auth.UsernameTakenException;
 import com.seatrush.event.EventNotFoundException;
+import com.seatrush.hold.HoldNotActiveException;
+import com.seatrush.hold.HoldNotFoundException;
 import com.seatrush.hold.InvalidHoldRequestException;
 import com.seatrush.hold.SeatsUnavailableException;
 import org.springframework.http.HttpStatus;
@@ -38,5 +40,15 @@ public class ApiExceptionHandler {
     @ExceptionHandler(InvalidHoldRequestException.class)
     ProblemDetail handleInvalidHoldRequest(InvalidHoldRequestException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(HoldNotFoundException.class)
+    ProblemDetail handleHoldNotFound(HoldNotFoundException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    @ExceptionHandler(HoldNotActiveException.class)
+    ProblemDetail handleHoldNotActive(HoldNotActiveException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
     }
 }

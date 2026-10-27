@@ -83,4 +83,27 @@ public class Hold {
     public Instant getConfirmedAt() {
         return confirmedAt;
     }
+
+    public boolean isExpiredAt(Instant now) {
+        return !expiresAt.isAfter(now);
+    }
+
+    /** ACTIVE -> CONFIRMED. The service has already checked the status and the deadline. */
+    public void confirm(Instant now) {
+        requireActive();
+        this.status = HoldStatus.CONFIRMED;
+        this.confirmedAt = now;
+    }
+
+    /** ACTIVE -> CANCELLED. */
+    public void cancel() {
+        requireActive();
+        this.status = HoldStatus.CANCELLED;
+    }
+
+    private void requireActive() {
+        if (status != HoldStatus.ACTIVE) {
+            throw new IllegalStateException("Hold " + id + " is " + status + ", not ACTIVE");
+        }
+    }
 }

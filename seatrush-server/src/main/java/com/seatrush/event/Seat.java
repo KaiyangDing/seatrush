@@ -77,4 +77,21 @@ public class Seat {
         this.status = SeatStatus.HELD;
         this.holdId = holdId;
     }
+
+    /** HELD -> SOLD. The seat keeps its hold_id as the record of who bought it. */
+    public void sell() {
+        if (status != SeatStatus.HELD) {
+            throw new IllegalStateException("Seat " + id + " is " + status + ", not HELD");
+        }
+        this.status = SeatStatus.SOLD;
+    }
+
+    /** HELD -> AVAILABLE: the hold was cancelled or ran out, so the seat goes back on sale. */
+    public void release() {
+        if (status != SeatStatus.HELD) {
+            throw new IllegalStateException("Seat " + id + " is " + status + ", not HELD");
+        }
+        this.status = SeatStatus.AVAILABLE;
+        this.holdId = null;
+    }
 }
