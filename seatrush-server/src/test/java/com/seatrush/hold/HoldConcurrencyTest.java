@@ -39,8 +39,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * commit on its own, so the data is cleaned up by hand after each test.
  * <p>
  * The whole class runs once per seat lock strategy: every strategy has to pass the same races.
+ * The precheck is off, so that every request really goes through the strategy's lock.
  */
-@SpringBootTest
+@SpringBootTest(properties = "seatrush.holds.precheck=false")
 @ParameterizedClass(name = "{0}")
 @ValueSource(strings = {"pessimistic", "optimistic", "in-memory", "redis"})
 class HoldConcurrencyTest {

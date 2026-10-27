@@ -42,6 +42,9 @@ management:
 seatrush:
   holds:
     duration: 5m
+    # Turn down requests for seats that are already taken before they queue for a lock.
+    # Only switched off to benchmark the lock strategies on their own.
+    precheck: true
   lock:
     # Which seat lock strategy new holds use: pessimistic, optimistic, in-memory or redis.
     # Admins can switch it while the application runs: PUT /api/admin/lock-strategy

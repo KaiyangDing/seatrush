@@ -34,6 +34,7 @@ public class HoldService {
     private final ApplicationEventPublisher events;
     private final SeatLockStrategies lockStrategies;
     private final Duration holdDuration;
+    private final boolean precheck;
 
     public HoldService(HoldRepository holdRepository, SeatRepository seatRepository,
                        EventRepository eventRepository, TransactionTemplate transactionTemplate,
@@ -46,6 +47,7 @@ public class HoldService {
         this.events = events;
         this.lockStrategies = lockStrategies;
         this.holdDuration = properties.duration();
+        this.precheck = properties.precheck();
     }
 
     /**
@@ -62,6 +64,18 @@ public class HoldService {
         SortedSet<Long> seatIds = new TreeSet<>(request.seatIds());
         if (seatIds.size() != request.seatIds().size()) {
             throw new InvalidHoldRequestException("Seat ids must not repeat");
+        }
+        if (precheck) {
+            // The fast path for a rush: a seat that is already taken cannot be won by queueing for a lock.
+            // This read takes no lock and may be a moment old, but a seat it sees taken really was taken;
+            // seats it sees free are checked again under the strategy's lock.
+            List<Long> taken = seatRepository.findTakenSeatIds(eventId, seatIds, SeatStatus.AVAILABLE);
+            if (!taken.isEmpty()) {
+                // Taken perhaps by a copy of this very request that committed a moment ago: then it is ours
+                return holdRepository.findByUserIdAndIdempotencyKey(userId, request.idempotencyKey())
+                        .map(this::toResponse)
+                        .orElseThrow(() -> new SeatsUnavailableException(taken));
+            }
         }
         // Read once: if an admin switches strategy meanwhile, this request still uses one strategy throughout
         SeatLockStrategy strategy = lockStrategies.current();
