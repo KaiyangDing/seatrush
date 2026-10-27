@@ -42,7 +42,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  */
 @SpringBootTest
 @ParameterizedClass(name = "{0}")
-@ValueSource(strings = {"pessimistic", "optimistic"})
+@ValueSource(strings = {"pessimistic", "optimistic", "in-memory"})
 class HoldConcurrencyTest {
 
     private static final int USERS = 100;

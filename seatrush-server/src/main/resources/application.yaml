@@ -37,8 +37,10 @@ seatrush:
   holds:
     duration: 5m
   lock:
-    # Which seat lock strategy new holds use: pessimistic or optimistic
+    # Which seat lock strategy new holds use: pessimistic, optimistic or in-memory
     strategy: pessimistic
+    # How long a request waits for a seat lock before it gives up with 409
+    wait-timeout: 5s
   security:
     # Local development defaults only. Override with environment variables outside your machine.
     jwt-secret: ${SEATRUSH_JWT_SECRET:local-dev-jwt-secret-change-me-0123456789}
