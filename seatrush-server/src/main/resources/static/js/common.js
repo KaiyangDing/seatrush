@@ -149,6 +149,9 @@ class AuthBox {
   render() {
     this.container.replaceChildren();
     if (this.me) {
+      if (this.isAdmin() && location.pathname !== '/admin.html') {
+        this.container.append(el('a', { href: '/admin.html', class: 'small' }, 'Admin page'));
+      }
       this.container.append(
         el('span', { class: 'who' }, 'Signed in as ', el('strong', {}, this.me.username)),
         el('button', { type: 'button', class: 'btn btn-quiet', onclick: () => this.logout() }, 'Log out'),

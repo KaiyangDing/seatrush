@@ -38,6 +38,16 @@ class StaticPagesTest {
     }
 
     @Test
+    void adminPageIsPublicButItsApiIsNot() throws Exception {
+        // The page only shows a login box to anybody who is not an admin
+        mockMvc.perform(get("/admin.html"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("/js/admin.js")));
+        mockMvc.perform(get("/js/admin.js")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/admin/lock-strategy")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void otherPathsStillNeedALogin() throws Exception {
         mockMvc.perform(get("/secret.html")).andExpect(status().isUnauthorized());
     }

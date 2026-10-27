@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SeatRush Admin</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='8' width='24' height='18' rx='5' fill='%232f6fed'/%3E%3Crect x='8' y='4' width='16' height='10' rx='4' fill='%2385a9f7'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/css/seatrush.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">Seat<span>Rush</span></a>
+    <span class="badge">Admin</span>
+    <span id="live" class="live" data-state="off">Offline</span>
+    <a href="/" class="small">Seat map</a>
+    <div id="auth" class="auth"></div>
+  </header>
+
+  <main class="page">
+    <div id="gate" class="card notice" hidden></div>
+
+    <div id="console" class="admin-grid" hidden>
+      <section class="card" aria-labelledby="strategy-title">
+        <h2 id="strategy-title">Seat lock strategy</h2>
+        <p class="muted small">How concurrent holds for the same seat are kept apart. A switch applies to the next hold;
+          holds already running finish with the strategy they started with.</p>
+        <div id="strategies" class="strategies"></div>
+      </section>
+
+      <section class="card" aria-labelledby="new-event-title">
+        <h2 id="new-event-title">New event</h2>
+        <form id="event-form" class="form">
+          <label>Name <input name="name" required maxlength="200" placeholder="Jay Chou Live"></label>
+          <label>Venue <input name="venue" required maxlength="200" placeholder="Madison Square Garden"></label>
+          <label>Starts at <input name="startsAt" type="datetime-local" required></label>
+          <div class="pair">
+            <label>Rows <input name="seatRows" type="number" min="1" max="50" value="10" required></label>
+            <label>Seats per row <input name="seatsPerRow" type="number" min="1" max="50" value="12" required></label>
+          </div>
+          <button type="submit" class="btn btn-primary">Create event</button>
+        </form>
+      </section>
+
+      <section class="card wide-card" aria-labelledby="events-title">
+        <h2 id="events-title">Events</h2>
+        <p class="muted small">Seat counts update live while people hold and buy.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Event</th><th>Starts</th><th>Seats</th><th>Sales</th>
+                <th>Available</th><th>Held</th><th>Sold</th>
+              </tr>
+            </thead>
+            <tbody id="event-rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script src="/js/common.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>
