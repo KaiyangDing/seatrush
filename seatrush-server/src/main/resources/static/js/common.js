@@ -103,7 +103,8 @@ function seatName(seat) {
 }
 
 function formatDate(iso) {
-  return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  // English like the rest of the page, in the viewer's own time zone
+  return new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 function countStatuses(seats) {
