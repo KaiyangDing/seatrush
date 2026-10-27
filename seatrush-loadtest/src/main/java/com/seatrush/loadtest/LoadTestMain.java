@@ -87,7 +87,7 @@ public final class LoadTestMain {
                 options.users(), options.rounds(), options.rounds() == 1 ? "" : "s", options.seed()));
         header.add("- Every number is the median over the rounds. Held, taken, busy and errors count requests;");
         header.add("  throughput is answered requests per second of the whole rush.");
-        String markdown = BenchmarkReport.markdown(runs, String.join("\n", header) + "\n");
+        String markdown = BenchmarkReport.markdown(runs, String.join("\n", header));
 
         Files.createDirectories(options.out());
         String file = "comparison-" + started.replace(":", "").replace(" ", "-");
