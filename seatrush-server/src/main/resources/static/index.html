@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SeatRush</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='8' width='24' height='18' rx='5' fill='%232f6fed'/%3E%3Crect x='8' y='4' width='16' height='10' rx='4' fill='%2385a9f7'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/css/seatrush.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">Seat<span>Rush</span></a>
+    <span id="live" class="live" data-state="off">Connecting…</span>
+    <div id="auth" class="auth"></div>
+  </header>
+
+  <main class="page">
+    <section aria-label="Events">
+      <div id="event-list" class="event-list"></div>
+    </section>
+
+    <div class="workspace">
+      <section class="hall" aria-label="Seat map">
+        <div id="event-header" class="event-header"></div>
+        <div id="stats" class="stats"></div>
+        <div class="stage">Stage</div>
+        <div class="seat-map-scroll">
+          <div id="seat-map" class="seat-map"></div>
+        </div>
+        <ul class="legend" aria-label="Legend">
+          <li><span class="seat available"></span>Available</li>
+          <li><span class="seat selected"></span>Selected</li>
+          <li><span class="seat mine"></span>Yours</li>
+          <li><span class="seat held"></span>Held</li>
+          <li><span class="seat sold"></span>Sold</li>
+        </ul>
+      </section>
+
+      <aside id="panel" class="panel" aria-live="polite"></aside>
+    </div>
+  </main>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script src="/js/common.js"></script>
+  <script src="/js/seatmap.js"></script>
+</body>
+</html>

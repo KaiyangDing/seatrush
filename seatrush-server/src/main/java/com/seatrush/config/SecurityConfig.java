@@ -34,6 +34,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/events/**").permitAll()
+                        // The pages themselves are public; the API calls they make carry the token
+                        .requestMatchers(HttpMethod.GET, "/", "/index.html", "/css/**", "/js/**").permitAll()
                         .requestMatchers("/actuator/health", "/error").permitAll()
                         // The WebSocket handshake carries no token; the socket only ever pushes public seat statuses
                         .requestMatchers("/ws").permitAll()
