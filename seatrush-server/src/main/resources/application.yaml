@@ -37,7 +37,8 @@ seatrush:
   holds:
     duration: 5m
   lock:
-    # Which seat lock strategy new holds use: pessimistic, optimistic, in-memory or redis
+    # Which seat lock strategy new holds use: pessimistic, optimistic, in-memory or redis.
+    # Admins can switch it while the application runs: PUT /api/admin/lock-strategy
     strategy: pessimistic
     # How long a request waits for a seat lock before it gives up with 409
     wait-timeout: 5s

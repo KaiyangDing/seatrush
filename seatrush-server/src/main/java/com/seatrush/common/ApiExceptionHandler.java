@@ -8,8 +8,10 @@ import com.seatrush.hold.HoldNotFoundException;
 import com.seatrush.hold.InvalidHoldRequestException;
 import com.seatrush.hold.SeatsUnavailableException;
 import com.seatrush.lock.SeatsBusyException;
+import com.seatrush.lock.UnknownLockStrategyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -41,6 +43,23 @@ public class ApiExceptionHandler {
     @ExceptionHandler(SeatsBusyException.class)
     ProblemDetail handleSeatsBusy(SeatsBusyException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
+    }
+
+    /**
+     * The @Version check on Seat stopped a write. Normally a strategy prevents or retries this, but right
+     * after an admin switches strategy, requests under the old and the new one can still collide.
+     */
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    ProblemDetail handleOptimisticLockingFailure(ObjectOptimisticLockingFailureException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
+                "The seats were changed by another request at the same time, please try again");
+    }
+
+    @ExceptionHandler(UnknownLockStrategyException.class)
+    ProblemDetail handleUnknownLockStrategy(UnknownLockStrategyException e) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+        problem.setProperty("available", e.getAvailable());
+        return problem;
     }
 
     @ExceptionHandler(InvalidHoldRequestException.class)
